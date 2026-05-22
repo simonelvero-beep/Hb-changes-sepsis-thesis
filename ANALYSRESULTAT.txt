@@ -1,0 +1,946 @@
+Starting analysis pipeline: 2026-05-22 11:06:13 
+
+Step 1/8: Importing data...
+── Attaching core tidyverse packages ────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.2.0     ✔ readr     2.2.0
+✔ forcats   1.0.1     ✔ stringr   1.6.0
+✔ ggplot2   4.0.2     ✔ tibble    3.3.1
+✔ lubridate 1.9.5     ✔ tidyr     1.3.2
+✔ purrr     1.2.1     
+── Conflicts ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package to force all conflicts to become errors
+Raw data loaded:                                                                                                                                              
+  civakohort:    2586 rows
+  nivakohort:    725 rows
+  labkemi:       191080 rows
+  vatskebalans:  20510 rows
+  blodgashb:     139632 rows
+✓ Import complete
+
+Step 2/8: Cleaning data...
+
+Attaching package: ‘janitor’
+
+The following objects are masked from ‘package:stats’:
+
+    chisq.test, fisher.test
+Clean data row counts:
+  civakohort:    2540 
+  nivakohort:    707 
+  labkemi:       181328 
+  labkemi_samp:  182447 
+  vatskebalans:  20167 
+  blodgashb:     137168 
+✓ Clean complete
+
+Step 3/8: Deriving labkemi volume assumption...
+=== Empirical volume assumption ===
+
+Tube volume assumptions used:
+  EDTA (purple):   4 mL
+  SST (yellow):    4.5 mL
+  Citrat (blue):   3.5 mL
+
+Tube presence per sampling occasion (sepsis episodes, 0-48h):
+  Total occasions:       8138 
+  With EDTA tube:        90.9 %
+  With SST tube:         83.6 %
+  With Citrat tube:      74.2 %
+  Median params/draw:    10 
+  Mean params/draw:      8.6 
+
+>>> Recommended ml_per_draw_labkemi: 10 mL <<<
+
+Use this value in 03b_merge_comparison.R and 03c_merge_inflammation.R:
+  ml_per_draw_labkemi <- 10 
+
+✓ Volume assumption complete
+
+Step 4/8: Merging sepsis Hb data...
+Sepsis patients:
+  Episodes kept:    1484 
+  Unique patients:  1445 
+  Episodes with Hb data:  859 
+  Hb measurements on ICU: 29114 
+  Potential duplicate episode matches: 29 
+
+sepsis_hb_48h measurement types:
+# A tibble: 4 × 2
+  measurement_type          n
+  <chr>                 <int>
+1 36-60h window           507
+2 discharged before 36h   327
+3 no 36-60h Hb             24
+4 no Hb within 60h          1
+
+Age and sex distribution:
+# A tibble: 2 × 2
+  sex        n
+  <fct>  <int>
+1 female   372
+2 male     487
+Mean age: 65 
+
+Episodes in sepsis_hb_48h: 859 
+Episodes in sepsis_hb_long: 858 
+✓ Sepsis Hb merge complete
+
+Step 5/8: Merging comparison data...
+Neuro/SAH patients by group and cohort:
+# A tibble: 4 × 3
+  diagnosis_group cohort     n
+  <chr>           <chr>  <int>
+1 Neurotrauma     civa     430
+2 Neurotrauma     niva     381
+3 SAH             civa     140
+4 SAH             niva     256
+
+Episodes with Hb data: 858 
+Hb measurements on ICU: 37202 
+Potential duplicate episode matches: 59 
+
+Comparison dataset by diagnosis group:
+# A tibble: 3 × 2
+  diagnosis_group     n
+  <chr>           <int>
+1 Neurotrauma       522
+2 SAH               336
+3 Sepsis            859
+
+Sampling coverage by diagnosis group:
+# A tibble: 3 × 5
+  diagnosis_group     n n_with_sampling median_volume iqr_volume
+  <chr>           <int>           <int>         <dbl>      <dbl>
+1 Neurotrauma       522             522            41       28  
+2 SAH               336             336            44       24.9
+3 Sepsis            859               0            NA       NA  
+✓ Comparison merge complete
+
+Step 6/8: Merging inflammation data...
+Lab values at admission:
+  Episodes with any lab: 1283 
+CRP at 24-48h:
+  Episodes: 914 
+  Median: 259.5 
+Fluid balance coverage:
+  Episodes: 868 
+  Median fluid balance: 3782.7 mL
+
+Lab coverage in sepsis_hb_48h:
+# A tibble: 1 × 5
+  n_crp n_crp_24h n_lpk n_fluid n_rbc
+  <int>     <int> <int>   <int> <int>
+1   722       535   738     858   858
+
+Blood sampling coverage:
+# A tibble: 1 × 4
+  n_total_draws mean_draws mean_volume_ml max_volume_ml
+          <int>      <dbl>          <dbl>         <dbl>
+1           859       18.9             47           161
+
+Updated sampling coverage by diagnosis group:
+# A tibble: 3 × 4
+  diagnosis_group     n n_with_sampling median_volume
+  <chr>           <int>           <int>         <dbl>
+1 Neurotrauma       522             522            41
+2 SAH               336             336            44
+3 Sepsis            859             859            47
+
+Time-updated variables coverage in sepsis_hb_long:
+# A tibble: 1 × 7
+  n_obs n_with_cum_sample n_with_cum_sample_lag n_with_cum_fluid mean_cum_vol mean_cum_vol_lag max_cum_vol
+  <int>             <int>                 <int>            <int>        <dbl>            <dbl>       <dbl>
+1 13532             13532                 13532             7964         29.6             26.6         151
+
+Neuro/SAH lab linkage:
+  Lab rows linked: 55908 
+  Episodes covered: 1023 
+  Neuro/SAH episodes with admission labs: 973 
+  Neuro/SAH episodes with CRP 24-48h: 665 
+  Neuro/SAH episodes with fluid balance: 927 
+
+Lab coverage in neuro_sah_hb_48h:
+# A tibble: 1 × 5
+  n_crp n_crp_24h n_lpk n_fluid n_rbc
+  <int>     <int> <int>   <int> <int>
+1   718       550   726     858   858
+
+Lab/fluid coverage in comparison_hb_48h by diagnosis group:
+# A tibble: 3 × 6
+  diagnosis_group     n has_crp has_crp_24h has_fluid has_sampling
+  <chr>           <int>   <int>       <int>     <int>        <int>
+1 Neurotrauma       522     435         316       522          522
+2 SAH               336     283         234       336          336
+3 Sepsis            859     722         535       858          859
+✓ Inflammation merge complete
+
+Step 7/8: Descriptive statistics...
+Loading required package: patchwork
+Loading required package: moments
+Loading required package: gtsummary
+=== RQ1: Hb change in sepsis episodes ===
+
+Sepsis dataset size:
+  Episodes:         859 
+  Unique patients:  845 
+
+
+Summary - Hb change:
+# A tibble: 1 × 17
+  n_episodes n_valid_48h n_missing_48h mean_baseline sd_baseline median_baseline iqr_baseline mean_last sd_last median_last iqr_last median_change iqr_change
+       <int>       <int>         <int>         <dbl>       <dbl>           <dbl>        <dbl>     <dbl>   <dbl>       <dbl>    <dbl>         <dbl>      <dbl>
+1        859         507           352           110        20.9             108           29       101    17.7          99       26            -7         17
+  pct_decreased mean_change_pct median_change_pct iqr_change_pct
+          <dbl>           <dbl>             <dbl>          <dbl>
+1          72.4           -18.6              -6.5             15
+
+Episode outcome distribution (analysis cohort):
+# A tibble: 2 × 3
+  patient_outcome     n   pct
+  <fct>           <int> <dbl>
+1 alive             723  84.2
+2 dead              136  15.8
+
+Hb change by measurement type:
+# A tibble: 4 × 5
+  measurement_type          n median_change iqr_change pct_decreased
+  <chr>                 <int>         <dbl>      <dbl>         <dbl>
+1 36-60h window           507         -10         19            78.3
+2 discharged before 36h   327          -3         11            62.7
+3 no 36-60h Hb             24          -7.5       10.8          79.2
+4 no Hb within 60h          1          NA         NA           NaN  
+
+Missing 48h measurement by ICU stay:
+# A tibble: 2 × 5
+  missing_48h     n median_icu_hours min_icu_hours max_icu_hours
+  <lgl>       <int>            <dbl>         <dbl>         <dbl>
+1 FALSE         507             95.5          36.5         1534.
+2 TRUE          352             22.2           1.2          548.
+
+Missing data (%):
+# A tibble: 25 × 2
+   variable    pct_missing
+   <chr>             <dbl>
+ 1 hb_48h             41  
+ 2 hb_48h_time        41  
+ 3 crp_24h            37.7
+ 4 bilirubin          16.3
+ 5 crp                15.9
+ 6 kreatinin          15.9
+ 7 tpk                14.6
+ 8 mch                14.1
+ 9 mcv                14.1
+10 lpk                14.1
+# ℹ 15 more rows
+# ℹ Use `print(n = ...)` to see more rows
+
+Hb by 6-hour intervals:
+# A tibble: 9 × 5
+  hour_bin     n mean_hb sd_hb median_hb
+     <dbl> <int>   <dbl> <dbl>     <dbl>
+1        0  2783   110.   21.6       109
+2        6  2263   107.   20.5       106
+3       12  1929   105.   18.8       103
+4       18  1661   103.   18.3       100
+5       24  1435   101.   17.8        99
+6       30  1254    99.6  17.4        97
+7       36  1144    98.8  17          96
+8       42  1060    98.7  17.6        95
+9       48     3   104    15.1       102
+
+Normality check:
+
+	Shapiro-Wilk normality test
+
+data:  na.omit(sepsis_hb_48h$hb_change)
+W = 0.94673, p-value < 2.2e-16
+
+Skewness: -0.262 
+Kurtosis: 7.629 
+
+Displaying RQ1 plots...
+`geom_smooth()` using method = 'gam' and formula = 'y ~ s(x, bs = "cs")'
+`geom_smooth()` using method = 'gam' and formula = 'y ~ s(x, bs = "cs")'
+All RQ1 figures saved to figures/
+`geom_smooth()` using method = 'gam' and formula = 'y ~ s(x, bs = "cs")'
+Saved: figures/fig_rq1_combined.png
+
+=== RQ2: Comparison across diagnosis groups ===
+
+Comparison dataset size:
+# A tibble: 3 × 2
+  diagnosis_group     n
+  <chr>           <int>
+1 Neurotrauma       522
+2 SAH               336
+3 Sepsis            859
+
+Displaying RQ2 plots...
+Saved: figures/fig_rq2_combined.png
+Saved: figures/fig_rq2_hb_change.png
+Saved: figures/fig_rq2_baseline_hb.png
+Saved: figures/fig_rq2_sampling_volume.png
+Table saved to figures/table1_combined.docx
+✓ Descriptive stats complete
+
+Step 8/8: Analysis...
+Loading required package: lme4
+Loading required package: Matrix
+
+Attaching package: ‘Matrix’
+
+The following objects are masked from ‘package:tidyr’:
+
+    expand, pack, unpack
+
+Loading required package: lmerTest
+
+Attaching package: ‘lmerTest’
+
+The following object is masked from ‘package:lme4’:
+
+    lmer
+
+The following object is masked from ‘package:stats’:
+
+    step
+
+Loading required package: broom.mixed
+Loading required package: ggpubr
+Registered S3 method overwritten by 'car':
+  method           from
+  na.action.merMod lme4
+=== RQ1: Hb change in sepsis episodes ===
+
+Episodes: 859 
+Unique patients: 845 
+
+Normality check:
+
+	Shapiro-Wilk normality test
+
+data:  na.omit(sepsis_hb_48h$hb_change)
+W = 0.94673, p-value < 2.2e-16
+
+Skewness: -0.262 
+Kurtosis: 7.629 
+
+Wilcoxon signed rank - baseline vs last Hb:
+
+	Wilcoxon signed rank test with continuity correction
+
+data:  paired_hb$hb_baseline and paired_hb$hb_last
+V = 274707, p-value < 2.2e-16
+alternative hypothesis: true location shift is not equal to 0
+
+
+Hb change by patient outcome:
+
+	Wilcoxon rank sum test with continuity correction
+
+data:  hb_change by patient_outcome
+W = 46388, p-value = 0.3609
+alternative hypothesis: true location shift is not equal to 0
+
+# A tibble: 2 × 4
+  patient_outcome     n median_change iqr_change
+  <fct>           <int>         <dbl>      <dbl>
+1 alive             723            -7       16.5
+2 dead              136            -5       18  
+
+Hb change by measurement type:
+
+	Kruskal-Wallis rank sum test
+
+data:  hb_change by measurement_type
+Kruskal-Wallis chi-squared = 61.082, df = 2, p-value = 5.448e-14
+
+
+Post-hoc pairwise comparisons for measurement type (Bonferroni):
+
+	Pairwise comparisons using Wilcoxon rank sum test with continuity correction 
+
+data:  measurement_data$hb_change and measurement_data$measurement_type 
+
+                      36-60h window discharged before 36h
+discharged before 36h 2.4e-14       -                    
+no 36-60h Hb          0.78          0.13                 
+
+P value adjustment method: bonferroni 
+# A tibble: 3 × 4
+  measurement_type          n median_change iqr_change
+  <chr>                 <int>         <dbl>      <dbl>
+1 36-60h window           507         -10         19  
+2 discharged before 36h   327          -3         11  
+3 no 36-60h Hb             24          -7.5       10.8
+
+Correlation - Hb change vs ICU stay:
+
+	Spearman's rank correlation rho
+
+data:  icu_cor_data$hb_change and icu_cor_data$icu_hours
+S = 135320744, p-value < 2.2e-16
+alternative hypothesis: true rho is not equal to 0
+sample estimates:
+       rho 
+-0.2854475 
+
+
+Sensitivity analysis - primary episode-level dataset:
+# A tibble: 1 × 5
+      n n_valid median_change iqr_change pct_decreased
+  <int>   <int>         <dbl>      <dbl>         <dbl>
+1   859     858            -7         17          72.4
+
+Sensitivity - excluding transfused episodes (rbc_48h = 0):
+# A tibble: 1 × 4
+      n median_change iqr_change pct_decreased
+  <int>         <dbl>      <dbl>         <dbl>
+1   654            -7         16            75
+
+Sensitivity - episodes with ICU stay >= 48h:
+# A tibble: 1 × 4
+      n median_change iqr_change pct_decreased
+  <int>         <dbl>      <dbl>         <dbl>
+1   446           -11         19          78.7
+
+=== RQ2: Comparison across diagnosis groups ===
+
+Descriptive stats by group:
+# A tibble: 3 × 8
+  diagnosis_group     n n_valid median_baseline median_change iqr_change pct_decreased pct_dead
+  <chr>           <int>   <int>           <dbl>         <dbl>      <dbl>         <dbl>    <dbl>
+1 Neurotrauma       522     522            119             -8         18          74.3      5  
+2 SAH               336     336            128.            -9         18          77.7     10.7
+3 Sepsis            859     858            108             -7         17          72.4     15.8
+
+Kruskal-Wallis test:
+
+	Kruskal-Wallis rank sum test
+
+data:  hb_change by diagnosis_group
+Kruskal-Wallis chi-squared = 3.9666, df = 2, p-value = 0.1376
+
+
+Post-hoc pairwise comparisons (Bonferroni):
+
+	Pairwise comparisons using Wilcoxon rank sum test with continuity correction 
+
+data:  rq2_data$hb_change and rq2_data$diagnosis_group 
+
+       Neurotrauma SAH 
+SAH    0.93        -   
+Sepsis 0.94        0.15
+
+P value adjustment method: bonferroni 
+
+Baseline Hb comparison across groups:
+
+	Kruskal-Wallis rank sum test
+
+data:  hb_baseline by diagnosis_group
+Kruskal-Wallis chi-squared = 196.32, df = 2, p-value < 2.2e-16
+
+
+Adjusted group comparison for hb_last:
+Adjusted model dataset size:
+# A tibble: 3 × 2
+  diagnosis_group     n
+  <fct>           <int>
+1 Neurotrauma       520
+2 SAH               336
+3 Sepsis            858
+
+Call:
+lm(formula = hb_last ~ diagnosis_group + hb_baseline + age + 
+    sex + hours_at_last, data = ancova_data)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-117.322   -6.602    0.138    6.930   59.454 
+
+Coefficients:
+                      Estimate Std. Error t value Pr(>|t|)    
+(Intercept)           41.11392    2.03545  20.199  < 2e-16 ***
+diagnosis_groupSAH     3.90073    0.83913   4.649  3.6e-06 ***
+diagnosis_groupSepsis -2.50502    0.65471  -3.826 0.000135 ***
+hb_baseline            0.61046    0.01374  44.415  < 2e-16 ***
+age                    0.03040    0.01573   1.932 0.053497 .  
+sexmale                1.97581    0.57790   3.419 0.000643 ***
+hours_at_last         -0.19752    0.01345 -14.691  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 11.33 on 1707 degrees of freedom
+Multiple R-squared:  0.623,	Adjusted R-squared:  0.6216 
+F-statistic: 470.1 on 6 and 1707 DF,  p-value: < 2.2e-16
+
+
+Explicit pairwise contrasts:
+Sepsis vs SAH (adjusted):
+  Estimate Std. Error    t value   Pr(>|t|) 
+   -6.4058     0.7897    -8.1115     0.0000 
+
+Summary of adjusted pairwise comparisons:
+             Comparison  Beta p_value
+1 Sepsis vs Neurotrauma -2.51   1e-04
+2    SAH vs Neurotrauma  3.90   0e+00
+3         Sepsis vs SAH -6.41   0e+00
+
+Crude vs adjusted Hb change by diagnosis group:
+# A tibble: 3 × 6
+  diagnosis_group     n mean_baseline crude_change mean_last mean_hours_at_last
+  <fct>           <int>         <dbl>        <dbl>     <dbl>              <dbl>
+1 Neurotrauma       520          119.         -9.6      109                38.4
+2 SAH               336          128.        -10.6      117.               42.9
+3 Sepsis            858          110          -9        101                39.6
+
+Sampling volume comparison across groups:
+# A tibble: 3 × 3
+  diagnosis_group median_volume iqr_volume
+  <chr>                   <dbl>      <dbl>
+1 Neurotrauma                41       28  
+2 SAH                        44       24.9
+3 Sepsis                     47       32.8
+
+	Kruskal-Wallis rank sum test
+
+data:  total_volume_ml by diagnosis_group
+Kruskal-Wallis chi-squared = 43.285, df = 2, p-value = 3.988e-10
+
+
+Plot: Hb change by diagnosis group
+
+=== RQ3: Association with inflammation and other variables ===
+
+Spearman correlations with Hb change:
+            variable    rho p_value sig
+1                crp -0.058  0.1202  ns
+2            crp_24h -0.264  0.0000 ***
+3                lpk  0.034  0.3553  ns
+4                tpk -0.036  0.3291  ns
+5                mch -0.087  0.0182   *
+6                mcv -0.077  0.0367   *
+7          kreatinin -0.099  0.0076  **
+8          bilirubin -0.029  0.4362  ns
+9                age  0.068  0.0478   *
+10       hb_baseline -0.485  0.0000 ***
+11 fluid_balance_48h -0.362  0.0000 ***
+12           rbc_48h  0.092  0.0069  **
+13        plasma_48h -0.113  0.0009 ***
+14   total_volume_ml -0.347  0.0000 ***
+15  n_bloodgas_draws -0.354  0.0000 ***
+16   n_labkemi_draws -0.284  0.0000 ***
+
+Crude univariable effect-size approximations (NOT independent effects):
+Mean CRP 24h: 266.6 mg/L
+Crude univariable Hb association with inflammation: -7.1 g/L
+
+Mean fluid balance: 4429.6 mL
+Crude univariable Hb association with hemodilution: -4.5 g/L
+
+Mean sampling volume: 47 mL
+Crude univariable Hb association with blood sampling: -8.6 g/L
+
+Observed median Hb change: -7 g/L
+
+Dose-response - sampling tertiles:
+# A tibble: 3 × 6
+  sampling_group     n mean_volume median_change iqr_change pct_decreased
+  <fct>          <int>       <dbl>         <dbl>      <dbl>         <dbl>
+1 Low              286        19.6          -3            9          61.2
+2 Medium           286        46.9          -7           16          74.1
+3 High             286        74.7         -14.5         23          81.8
+
+	Kruskal-Wallis rank sum test
+
+data:  hb_change by sampling_group
+Kruskal-Wallis chi-squared = 92.229, df = 2, p-value < 2.2e-16
+
+
+	Pairwise comparisons using Wilcoxon rank sum test with continuity correction 
+
+data:  sampling_data$hb_change and sampling_data$sampling_group 
+
+       Low     Medium 
+Medium 6.4e-07 -      
+High   < 2e-16 2.9e-06
+
+P value adjustment method: bonferroni 
+
+Confounding check - inflammation and ICU stay across sampling groups:
+# A tibble: 3 × 5
+  sampling_group median_crp median_crp_24h median_icu_hrs pct_dead
+  <fct>               <dbl>          <dbl>          <dbl>    <dbl>
+1 Low                   233            230           20.2     19.9
+2 Medium                253            249           67.8     11.9
+3 High                  235            282          109.      15.7
+
+Kruskal-Wallis - CRP across sampling groups:
+
+	Kruskal-Wallis rank sum test
+
+data:  crp by sampling_group
+Kruskal-Wallis chi-squared = 1.2518, df = 2, p-value = 0.5348
+
+
+Kruskal-Wallis - ICU hours across sampling groups:
+
+	Kruskal-Wallis rank sum test
+
+data:  icu_hours by sampling_group
+Kruskal-Wallis chi-squared = 514.03, df = 2, p-value < 2.2e-16
+
+
+Correlation - sampling volume vs ICU hours:
+
+	Spearman's rank correlation rho
+
+data:  sampling_icu_cor_data$total_volume_ml and sampling_icu_cor_data$icu_hours
+S = 23011043, p-value < 2.2e-16
+alternative hypothesis: true rho is not equal to 0
+sample estimates:
+      rho 
+0.7821745 
+
+
+Adjusted model - sampling independent of ICU stay:
+
+Call:
+lm(formula = hb_change ~ total_volume_ml + icu_hours + crp_24h + 
+    fluid_balance_48h + rbc_48h + hb_baseline + age + sex, data = sepsis_hb_48h, 
+    na.action = na.omit)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-35.536  -7.074  -0.275   6.896  38.380 
+
+Coefficients:
+                    Estimate Std. Error t value Pr(>|t|)    
+(Intercept)       40.3569542  4.1168794   9.803  < 2e-16 ***
+total_volume_ml   -0.1044294  0.0285497  -3.658 0.000280 ***
+icu_hours         -0.0010758  0.0038708  -0.278 0.781180    
+crp_24h           -0.0137145  0.0040142  -3.417 0.000684 ***
+fluid_balance_48h -0.0003610  0.0001132  -3.190 0.001506 ** 
+rbc_48h            0.0009195  0.0011139   0.825 0.409480    
+hb_baseline       -0.3906615  0.0269005 -14.522  < 2e-16 ***
+age                0.0293093  0.0324676   0.903 0.367086    
+sexmale            1.7465172  0.9954683   1.754 0.079935 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 11.26 on 524 degrees of freedom
+  (326 observations deleted due to missingness)
+Multiple R-squared:  0.416,	Adjusted R-squared:  0.4071 
+F-statistic: 46.66 on 8 and 524 DF,  p-value: < 2.2e-16
+
+
+Beta per mL sampled (adjusted): -0.1044 g/L
+
+--- Primary Longitudinal Model (lagged time-updated exposures) ---
+
+Complete case dataset (lagged, centered time):
+  Observations: 9754 
+  Episodes:     481 
+  Patients:     476 
+
+Model comparison - base vs no_sampling vs primary:
+Data: sepsis_hb_long_complete
+Models:
+model_base: lab_result ~ hours_c + (1 + hours_c | episode_id)
+model_no_sampling: lab_result ~ hours_c + crp_24h * hours_c + lpk + cum_fluid_balance_lag + cum_rbc_lag + cum_plasma_lag + tpk + kreatinin + bilirubin + age + sex + hb_baseline + (1 + hours_c | episode_id)
+model_primary: lab_result ~ hours_c + crp_24h * hours_c + lpk + cum_fluid_balance_lag + cum_rbc_lag + cum_plasma_lag + cum_total_vol_ml_lag * hours_c + tpk + kreatinin + bilirubin + age + sex + hb_baseline + (1 + hours_c | episode_id)
+                  npar   AIC   BIC logLik -2*log(L)   Chisq Df Pr(>Chisq)    
+model_base           6 63875 63918 -31932     63863                          
+model_no_sampling   18 62841 62970 -31402     62805 1058.47 12  < 2.2e-16 ***
+model_primary       20 62658 62802 -31309     62618  187.01  2  < 2.2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Fixed effects - primary model (lagged, centered time):
+# A tibble: 16 × 9
+   effect term                         estimate std.error statistic    df p.value conf.low conf.high
+   <chr>  <chr>                           <dbl>     <dbl>     <dbl> <dbl>   <dbl>    <dbl>     <dbl>
+ 1 fixed  (Intercept)                    7.03      2.29      3.07    601.  0.0022   2.54     11.5   
+ 2 fixed  hours_c                       -0.187     0.0394   -4.75    697.  0       -0.265    -0.110 
+ 3 fixed  crp_24h                       -0.0091    0.0031   -2.88    417.  0.0041  -0.0152   -0.0029
+ 4 fixed  lpk                            0.0086    0.0158    0.544   484.  0.587   -0.0225    0.0396
+ 5 fixed  cum_fluid_balance_lag         -0.0001    0        -2.06   9560.  0.0391  -0.0002    0     
+ 6 fixed  cum_rbc_lag                    0.0046    0.0006    7.58   9382.  0        0.0034    0.0058
+ 7 fixed  cum_plasma_lag                -0.0034    0.0007   -4.82   9476.  0       -0.0048   -0.002 
+ 8 fixed  cum_total_vol_ml_lag          -0.0359    0.0123   -2.92   8004.  0.0036  -0.0601   -0.0118
+ 9 fixed  tpk                           -0.002     0.0021   -0.973   499.  0.331   -0.0061    0.0021
+10 fixed  kreatinin                     -0.0007    0.0023   -0.287   498.  0.774   -0.0053    0.0039
+11 fixed  bilirubin                     -0.0017    0.0062   -0.280   500.  0.780   -0.0139    0.0104
+12 fixed  age                            0.0114    0.0183    0.625   500.  0.532   -0.0245    0.0473
+13 fixed  sexmale                        0.0337    0.560     0.0603  496.  0.952   -1.07      1.13  
+14 fixed  hb_baseline                    0.894     0.0141   63.3     493.  0        0.867     0.922 
+15 fixed  hours_c:crp_24h               -0.0004    0.0001   -3.52    473.  0.0005  -0.0006   -0.0002
+16 fixed  hours_c:cum_total_vol_ml_lag   0.0027    0.0002   12.7    9305.  0        0.0023    0.0032
+
+Key terms (main effects interpreted at hour 24):
+# A tibble: 5 × 9
+  effect term                         estimate std.error statistic    df p.value conf.low conf.high
+  <chr>  <chr>                           <dbl>     <dbl>     <dbl> <dbl>   <dbl>    <dbl>     <dbl>
+1 fixed  hours_c                       -0.187     0.0394     -4.75  697.  0       -0.265    -0.110 
+2 fixed  crp_24h                       -0.0091    0.0031     -2.88  417.  0.0041  -0.0152   -0.0029
+3 fixed  cum_total_vol_ml_lag          -0.0359    0.0123     -2.92 8004.  0.0036  -0.0601   -0.0118
+4 fixed  hours_c:crp_24h               -0.0004    0.0001     -3.52  473.  0.0005  -0.0006   -0.0002
+5 fixed  hours_c:cum_total_vol_ml_lag   0.0027    0.0002     12.7  9305.  0        0.0023    0.0032
+
+Marginal effect of 1 mL additional prior sampling at key time points:
+  At hour  0: -0.1018 g/L per mL
+  At hour 24: -0.0359 g/L per mL
+  At hour 48: 0.03 g/L per mL
+
+Per-draw effect on Hb:
+
+Call:
+lm(formula = hb_change ~ total_draws + icu_hours + crp_24h + 
+    hb_baseline + age + sex, data = sepsis_hb_48h, na.action = na.omit)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-34.679  -6.818  -0.389   6.507  37.464 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 44.9863934  3.8300768  11.746  < 2e-16 ***
+total_draws -0.4069739  0.0730808  -5.569 4.09e-08 ***
+icu_hours   -0.0002635  0.0039389  -0.067 0.946680    
+crp_24h     -0.0145542  0.0039742  -3.662 0.000275 ***
+hb_baseline -0.4101182  0.0249370 -16.446  < 2e-16 ***
+age          0.0235961  0.0318987   0.740 0.459799    
+sexmale      1.8126804  0.9969167   1.818 0.069588 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 11.31 on 527 degrees of freedom
+  (325 observations deleted due to missingness)
+Multiple R-squared:  0.409,	Adjusted R-squared:  0.4023 
+F-statistic:  60.8 on 6 and 527 DF,  p-value: < 2.2e-16
+
+
+Estimated Hb loss per blood draw: -0.407 g/L
+At mean 18.9 draws -> estimated total loss: -7.7 g/L
+
+Plot: Forest plot for primary model
+`height` was translated to `width`.
+
+Plot: Observed vs predicted trajectory
+`geom_smooth()` using method = 'gam' and formula = 'y ~ s(x, bs = "cs")'
+`geom_smooth()` using method = 'gam' and formula = 'y ~ s(x, bs = "cs")'
+
+Plot: Mechanism plots
+`geom_smooth()` using formula = 'y ~ x'
+`geom_smooth()` using formula = 'y ~ x'
+`geom_smooth()` using formula = 'y ~ x'
+`geom_smooth()` using method = 'gam' and formula = 'y ~ s(x, bs = "cs")'
+
+=== RQ3 Contrast: Sampling vs Hb decline in neuro/SAH ===
+
+Neuro/SAH contrast dataset:
+  Episodes: 858 
+# A tibble: 2 × 2
+  diagnosis_group     n
+  <chr>           <int>
+1 Neurotrauma       522
+2 SAH               336
+
+Descriptive summary - neuro/SAH:
+# A tibble: 1 × 6
+      n median_change iqr_change pct_decreased median_volume iqr_volume
+  <int>         <dbl>      <dbl>         <dbl>         <dbl>      <dbl>
+1   858            -8         17          75.6          42.5       27.9
+
+Spearman correlation - sampling vs Hb change (neuro/SAH):
+
+	Spearman's rank correlation rho
+
+data:  neuro_sah_rq3$total_volume_ml and neuro_sah_rq3$hb_change
+S = 137170531, p-value < 2.2e-16
+alternative hypothesis: true rho is not equal to 0
+sample estimates:
+       rho 
+-0.3030191 
+
+
+Spearman correlations with Hb change - neuro/SAH group:
+            variable    rho p_value sig
+1                crp  0.050  0.1808  ns
+2            crp_24h -0.103  0.0161   *
+3                lpk -0.273  0.0000 ***
+4                tpk -0.087  0.0185   *
+5  fluid_balance_48h -0.220  0.0000 ***
+6            rbc_48h  0.147  0.0000 ***
+7    total_volume_ml -0.303  0.0000 ***
+8        hb_baseline -0.502  0.0000 ***
+9                age  0.101  0.0032  **
+10         icu_hours -0.290  0.0000 ***
+
+Adjusted model - sampling in neuro/SAH:
+
+Call:
+lm(formula = hb_change ~ total_volume_ml + icu_hours + hb_baseline + 
+    crp_24h + fluid_balance_48h + rbc_48h + age + sex, data = neuro_sah_rq3, 
+    na.action = na.omit)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-111.009   -7.043   -0.168    6.238   39.031 
+
+Coefficients:
+                    Estimate Std. Error t value Pr(>|t|)    
+(Intercept)       53.3139998  4.2656685  12.498  < 2e-16 ***
+total_volume_ml   -0.0532627  0.0328094  -1.623 0.105089    
+icu_hours         -0.0106867  0.0029299  -3.647 0.000291 ***
+hb_baseline       -0.5028526  0.0271760 -18.504  < 2e-16 ***
+crp_24h           -0.0290517  0.0063157  -4.600 5.27e-06 ***
+fluid_balance_48h -0.0022199  0.0002898  -7.660 8.71e-14 ***
+rbc_48h            0.0020486  0.0011517   1.779 0.075834 .  
+age                0.0592031  0.0283855   2.086 0.037477 *  
+sexmale            2.7516926  1.0271649   2.679 0.007612 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 11.22 on 539 degrees of freedom
+  (310 observations deleted due to missingness)
+Multiple R-squared:  0.4965,	Adjusted R-squared:  0.4891 
+F-statistic: 66.45 on 8 and 539 DF,  p-value: < 2.2e-16
+
+
+Side-by-side: adjusted sampling effect in sepsis vs neuro/SAH:
+            group   n beta_per_ml p_value mean_volume_ml
+1          Sepsis 533     -0.1044  <0.001           47.0
+2 Neurotrauma/SAH 548     -0.0533   0.105           39.8
+
+Plot: Contrast - sampling vs Hb change by group
+`geom_smooth()` using formula = 'y ~ x'
+`geom_smooth()` using formula = 'y ~ x'
+
+=== RQ3 Extension: Diagnosis x Sampling interaction ===
+
+Dataset size:
+# A tibble: 3 × 2
+  diagnosis_group     n
+  <fct>           <int>
+1 Sepsis            533
+2 Neurotrauma       314
+3 SAH               234
+
+LRT - does diagnosis modify the sampling effect?
+Analysis of Variance Table
+
+Model 1: hb_change ~ total_volume_ml + diagnosis_group + icu_hours + hb_baseline + 
+    age + sex + fluid_balance_48h + rbc_48h + crp_24h
+Model 2: hb_change ~ total_volume_ml * diagnosis_group + icu_hours + hb_baseline + 
+    age + sex + fluid_balance_48h + rbc_48h + crp_24h
+  Res.Df    RSS Df Sum of Sq      F Pr(>F)
+1   1070 141722                           
+2   1068 141485  2    237.08 0.8948  0.409
+
+Interaction terms:
+                                        term Estimate Std. Error t value Pr(>|t|)
+1                            total_volume_ml  -0.0697     0.0271 -2.5713   0.0103
+2                 diagnosis_groupNeurotrauma  -2.5598     2.9529 -0.8669   0.3862
+3                         diagnosis_groupSAH   4.0133     3.1293  1.2825   0.1999
+4 total_volume_ml:diagnosis_groupNeurotrauma   0.0270     0.0526  0.5125   0.6084
+5         total_volume_ml:diagnosis_groupSAH  -0.0560     0.0520 -1.0774   0.2816
+
+Sampling effect per diagnosis group:
+        group beta_per_ml mean_volume_ml estimated_loss
+1      Sepsis     -0.0697           60.9           -4.2
+2 Neurotrauma     -0.0427           50.6           -2.2
+3         SAH     -0.1257           52.2           -6.6
+
+Plot: Sampling x diagnosis interaction
+`geom_smooth()` using formula = 'y ~ x'
+
+=== RESULTS SUMMARY ===
+
+--- RQ1: Hb change in sepsis (n = 859 episodes) ---
+Median Hb change (g/L):      -7 
+IQR (g/L):                   17 
+% with Hb decrease:          72.4 %
+Wilcoxon signed rank p:     <0.001
+Sensitivity - no transfusion:
+# A tibble: 1 × 3
+      n median_change iqr_change
+  <int>         <dbl>      <dbl>
+1   654            -7         16
+Sensitivity - ICU >= 48h:
+# A tibble: 1 × 3
+      n median_change iqr_change
+  <int>         <dbl>      <dbl>
+1   446           -11         19
+
+--- RQ2: Group comparison ---
+# A tibble: 3 × 7
+  diagnosis_group     n median_baseline median_change iqr_change pct_decreased median_volume
+  <chr>           <int>           <dbl>         <dbl>      <dbl>         <dbl>         <dbl>
+1 Neurotrauma       522            119             -8         18          74.3            41
+2 SAH               336            128.            -9         18          77.7            44
+3 Sepsis            859            108             -7         17          72.4            47
+Kruskal-Wallis Hb change p:             0.138 
+ANCOVA Sepsis vs Neurotrauma: beta = -2.51 , p <0.001 
+ANCOVA Sepsis vs SAH:         beta = -6.41 , p <0.001 
+ANCOVA SAH vs Neurotrauma:    beta = 3.9 , p <0.001 
+Sampling volume KW p:                   <0.001 
+
+--- RQ3: Mechanisms ---
+Spearman correlations with Hb change:
+  hb_baseline:       rho = -0.485 , p <0.001 
+  fluid_balance_48h: rho = -0.362 , p <0.001 
+  crp_24h:           rho = -0.264 , p <0.001 
+  total_volume_ml:   rho = -0.347 , p <0.001 
+
+Dose-response (sampling tertiles):
+# A tibble: 3 × 5
+  sampling_group     n mean_volume median_change iqr_change
+  <fct>          <int>       <dbl>         <dbl>      <dbl>
+1 Low              286        19.6          -3            9
+2 Medium           286        46.9          -7           16
+3 High             286        74.7         -14.5         23
+Kruskal-Wallis p: <0.001 
+
+Multivariable model (adjusted):
+  Sampling beta per mL: -0.1044 g/L, p <0.001 
+
+LMM primary model:
+  cum_total_vol_ml_lag at hour 24: -0.0359 g/L per mL, p 0.004 
+  LR test adding sampling:        p <0.001 
+  CRP x time interaction:         p <0.001 
+
+Per-draw effect:
+  Beta per draw: -0.407 g/L, p <0.001 
+
+Contrast analysis (neuro/SAH):
+  Spearman rho: -0.303 , p <0.001 
+  Adjusted beta per mL: -0.0533 g/L, p 0.105 
+
+Diagnosis x sampling interaction:
+  F-test p: 0.409 
+  Sepsis beta:       -0.0697 g/L per mL
+  Neurotrauma beta:  -0.0427 g/L per mL
+  SAH beta:          -0.1257 g/L per mL
+`geom_smooth()` using method = 'gam' and formula = 'y ~ s(x, bs = "cs")'
+Saved: figures/fig_rq1_combined.png
+Saved: figures/fig_rq2_hb_change.png
+`geom_smooth()` using formula = 'y ~ x'
+`geom_smooth()` using formula = 'y ~ x'
+`geom_smooth()` using formula = 'y ~ x'
+`geom_smooth()` using method = 'gam' and formula = 'y ~ s(x, bs = "cs")'
+Saved: figures/fig_rq3_mechanisms.png
+`height` was translated to `width`.
+Saved: figures/fig_rq3_forest.png
+`geom_smooth()` using method = 'gam' and formula = 'y ~ s(x, bs = "cs")'
+`geom_smooth()` using method = 'gam' and formula = 'y ~ s(x, bs = "cs")'
+Saved: figures/fig_rq3_obs_pred.png
+`geom_smooth()` using formula = 'y ~ x'
+`geom_smooth()` using formula = 'y ~ x'
+Saved: figures/fig_rq3_contrast.png
+Error in UseMethod("grid.draw") : 
+  no applicable method for 'grid.draw' applied to an object of class "c('double', 'numeric')"
+In addition: There were 50 or more warnings (use warnings() to see the first 50)
